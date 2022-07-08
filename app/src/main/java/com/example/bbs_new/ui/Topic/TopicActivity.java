@@ -2,6 +2,7 @@ package com.example.bbs_new.ui.Topic;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
@@ -20,7 +21,6 @@ import okhttp3.Request;
 import okhttp3.Response;
 
 public class TopicActivity extends AppCompatActivity {
-
     private ActivityTopicBinding binding;
     private RecyclerView recyclerView;
     private LinearLayoutManager linearLayoutManager;
@@ -58,12 +58,13 @@ public class TopicActivity extends AppCompatActivity {
                         .build();
                 Response response = client.newCall(request).execute();
                 String responseData = response.body().string();
+                Log.d("TopicActivity", responseData);
                 Gson gson = new Gson();
                 TopicResponse topicResponse = gson.fromJson(responseData, TopicResponse.class);
-                if (topicResponse.code.equals("200")) {
-                    updateTopicUI(topicResponse.data);
+                if (topicResponse.status.equals("200")) {
+                    updateTopicUI(topicResponse.result);
                 } else {
-                    Toast.makeText(getApplicationContext(), "网络错误", Toast.LENGTH_SHORT).show();
+                    notifyError();
                 }
             } catch (Exception e) {
                 e.printStackTrace();
@@ -71,21 +72,29 @@ public class TopicActivity extends AppCompatActivity {
         }).start();
     }
 
+    private void notifyError() {
+        runOnUiThread(() -> {
+            Toast.makeText(this, "网络错误", Toast.LENGTH_SHORT).show();
+        });
+    }
+
     private void updateTopicUI(List<TopicResponse._Topic> data) {
-        List<Topic> topicList = new ArrayList<>();
-        for (TopicResponse._Topic item : data) {
-            Topic topic = new Topic(item.title, "示例用户", item.content, item.createTime);
-            topicList.add(topic);
-        }
-        TopicAdapter topicAdapter = new TopicAdapter();
-        topicAdapter.setTopicList(topicList);
-        recyclerView.setAdapter(topicAdapter);
+        runOnUiThread(() -> {
+            List<Topic> topicList = new ArrayList<>();
+            for (TopicResponse._Topic item : data) {
+                Topic topic = new Topic(item.title, "匿名", item.content, item.createTime);
+                topicList.add(topic);
+            }
+            TopicAdapter topicAdapter = new TopicAdapter();
+            topicAdapter.setTopicList(topicList);
+            recyclerView.setAdapter(topicAdapter);
+        });
     }
 
     public static class TopicResponse {
-        public String code;
+        public String status;
         public String msg;
-        public List<_Topic> data;
+        public List<_Topic> result;
 
         public static class _Topic {
             public Long id;
